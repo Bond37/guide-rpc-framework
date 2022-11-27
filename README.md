@@ -69,7 +69,7 @@ List<String> listServersForServiceName(String rpcServiceName){
 
 #### 2.1 自定义协议
 
-![image-20221127191408475](E:\project\guide-rpc-framework\images\custom-protocol.png)
+ ![image-20221127191408475](images\custom-protocol.png)
 
 由于TCP/IP 中消息传输基于流的方式，没有边界，协议的目的就是划定消息的边界，制定通信双方要共同遵守的通信规则。
 
