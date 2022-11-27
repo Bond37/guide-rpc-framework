@@ -1,4 +1,4 @@
-package github.javaguide.annotation;
+package github.javaguide.spring.annotation;
 
 
 import java.lang.annotation.Documented;
@@ -23,7 +23,7 @@ public @interface RpcService {
     /**
      * Service version, default value is empty string
      */
-    String version() default "";
+    String version() default "v1";
 
     /**
      * Service group, default value is empty string

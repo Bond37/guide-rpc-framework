@@ -1,6 +1,6 @@
-package github.javaguide.annotation;
+package github.javaguide.spring.annotation;
 
-import github.javaguide.spring.CustomScannerRegistrar;
+import github.javaguide.spring.AutoRpcServiceScannerRegistrar;
 import org.springframework.context.annotation.Import;
 
 import java.lang.annotation.Documented;
@@ -17,7 +17,7 @@ import java.lang.annotation.Target;
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-@Import(CustomScannerRegistrar.class)
+@Import(AutoRpcServiceScannerRegistrar.class)
 @Documented
 public @interface RpcScan {
 

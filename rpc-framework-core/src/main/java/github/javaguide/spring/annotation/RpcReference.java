@@ -1,5 +1,4 @@
-package github.javaguide.annotation;
-
+package github.javaguide.spring.annotation;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,11 +22,15 @@ public @interface RpcReference {
     /**
      * Service version, default value is empty string
      */
-    String version() default "";
+    String version() default "v1";
 
     /**
      * Service group, default value is empty string
      */
     String group() default "";
+
+    int retries() default 0;
+
+    int timeout() default 0;
 
 }
