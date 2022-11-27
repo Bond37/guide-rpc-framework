@@ -1,5 +1,5 @@
 /.idea/
-/target/
+target
 /rpc-framework-core/target/
 /rpc-framework-common/target/
 /hello-service-api/target/
