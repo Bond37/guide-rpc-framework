@@ -150,9 +150,9 @@ public class NettyServerMain {
         NettyServer nettyServer = new NettyServer();
         // Register service manually
         HelloService helloService2 = new HelloServiceImpl2();
-        RpcServiceProperties rpcServiceConfig = RpcServiceProperties.builder()
+        RpcServiceProperties serviceDetail = RpcServiceProperties.builder()
                 .group("test2").version("version2").build();
-        nettyServer.registerService(helloService2, rpcServiceConfig);
+        nettyServer.registerService(helloService2, serviceDetail);
         nettyServer.start();
     }
 }
@@ -182,9 +182,9 @@ public class HelloController {
 
 ```java
 ClientTransport rpcRequestTransport = new SocketRpcClient();
-RpcServiceProperties rpcServiceConfig = RpcServiceProperties.builder()
+RpcServiceProperties serviceDetail = RpcServiceProperties.builder()
         .group("test2").version("version2").build();
-RpcClientProxy rpcClientProxy = new RpcClientProxy(rpcRequestTransport, rpcServiceConfig);
+RpcClientProxy rpcClientProxy = new RpcClientProxy(rpcRequestTransport, serviceDetail);
 HelloService helloService = rpcClientProxy.getProxy(HelloService.class);
 String hello = helloService.hello(new Hello("111", "222"));
 System.out.println(hello);

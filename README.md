@@ -1,65 +1,12 @@
 # guide-rpc-framework
 
-> [该 RPC 框架配套教程已经更新在我的星球，点击此链接了解详情。](https://javaguide.cn/zhuanlan/handwritten-rpc-framework.html)
-
-<div align="center">
-  <p> 中文| <a href="./README-EN.md">English</a>
-  </p>
-  <p>
-    <a href="https://github.com/Snailclimb/guide-rpc-framework">Github</a> | <a href="https://gitee.com/SnailClimb/guide-rpc-framework ">Gitee</a>
-  </p>
-</div>
-
-## 前言
-
-虽说 RPC 的原理实际不难，但是，自己在实现的过程中自己也遇到了很多问题。[guide-rpc-framework](https://github.com/Snailclimb/guide-rpc-framework) 目前只实现了 RPC 框架最基本的功能，一些可优化点都在下面提到了，有兴趣的小伙伴可以自行完善。
-
-通过这个简易的轮子，你可以学到 RPC 的底层原理和原理以及各种 Java 编码实践的运用。
-
-你甚至可以把 [guide-rpc-framework](https://github.com/Snailclimb/guide-rpc-framework) 当做你的毕设/项目经验的选择，这是非常不错！对比其他求职者的项目经验都是各种系统，造轮子肯定是更加能赢得面试官的青睐。
-
-如果你要将 [guide-rpc-framework](https://github.com/Snailclimb/guide-rpc-framework) 当做你的毕设/项目经验的话，我希望你一定要搞懂，而不是直接复制粘贴我的思想。你可以 fork 我的项目，然后进行优化。如果你觉得的优化是有价值的话，你可以提交 PR 给我，我会尽快处理。
-
 ## 介绍
 
- [guide-rpc-framework](https://github.com/Snailclimb/guide-rpc-framework) 是一款基于 Netty+Kyro+Zookeeper 实现的 RPC 框架。代码注释详细，结构清晰，并且集成了 Check Style 规范代码结构，非常适合阅读和学习。
+ [guide-rpc-framework](https://github.com/Snailclimb/guide-rpc-framework) 是一款基于 Netty+Kyro+Zookeeper 实现的 RPC 框架，通过该项目学习Netty和RPC相关知识。
 
-由于 Guide哥自身精力和能力有限，如果大家觉得有需要改进和完善的地方的话，欢迎 fork 本项目，然后 clone 到本地，在本地修改后提交 PR 给我，我会在第一时间 Review 你的代码。
 
-**我们先从一个基本的 RPC 框架设计思路说起！**
 
-### 一个基本的 RPC 框架设计思路
-
-> **注意** ：我们这里说的 RPC 框架指的是：可以让客户端直接调用服务端方法就像调用本地方法一样简单的框架，比如我前面介绍的 Dubbo、Motan、gRPC 这些。 如果需要和 HTTP 协议打交道，解析和封装 HTTP 请求和响应。这类框架并不能算是“RPC 框架”，比如 Feign。
-
-一个最简单的 RPC 框架使用示意图如下图所示,这也是 [guide-rpc-framework](https://github.com/Snailclimb/guide-rpc-framework) 目前的架构 ：
-
-![](./images/rpc-architure.png)
-
-服务提供端 Server 向注册中心注册服务，服务消费者 Client 通过注册中心拿到服务相关信息，然后再通过网络请求服务提供端 Server。
-
-作为 RPC 框架领域的佼佼者[Dubbo](https://github.com/apache/dubbo)的架构如下图所示,和我们上面画的大体也是差不多的。
-
-<img src="./images/dubbo-architure.jpg" style="zoom:80%;" />
-
-**一般情况下， RPC 框架不仅要提供服务发现功能，还要提供负载均衡、容错等功能，这样的 RPC 框架才算真正合格的。**
-
-**简单说一下设计一个最基本的 RPC 框架的思路：**
-
-![](./images/rpc-architure-detail.png)
-
-1. **注册中心** ：注册中心首先是要有的，推荐使用 Zookeeper。注册中心负责服务地址的注册与查找，相当于目录服务。服务端启动的时候将服务名称及其对应的地址(ip+port)注册到注册中心，服务消费端根据服务名称找到对应的服务地址。有了服务地址之后，服务消费端就可以通过网络请求服务端了。
-2. **网络传输** ：既然要调用远程的方法就要发请求，请求中至少要包含你调用的类名、方法名以及相关参数吧！推荐基于 NIO 的 Netty 框架。
-3. **序列化** ：既然涉及到网络传输就一定涉及到序列化，你不可能直接使用 JDK 自带的序列化吧！JDK 自带的序列化效率低并且有安全漏洞。 所以，你还要考虑使用哪种序列化协议，比较常用的有 hession2、kyro、protostuff。
-4. **动态代理** ： 另外，动态代理也是需要的。因为 RPC 的主要目的就是让我们调用远程方法像调用本地方法一样简单，使用动态代理可以屏蔽远程方法调用的细节比如网络传输。也就是说当你调用远程方法的时候，实际会通过代理对象来传输网络请求，不然的话，怎么可能直接就调用到远程方法呢？
-5. **负载均衡** ：负载均衡也是需要的。为啥？举个例子我们的系统中的某个服务的访问量特别大，我们将这个服务部署在了多台服务器上，当客户端发起请求的时候，多台服务器都可以处理这个请求。那么，如何正确选择处理该请求的服务器就很关键。假如，你就要一台服务器来处理该服务的请求，那该服务部署在多台服务器的意义就不复存在了。负载均衡就是为了避免单个服务器响应同一请求，容易造成服务器宕机、崩溃等问题，我们从负载均衡的这四个字就能明显感受到它的意义。
-6. ......
-
-### 项目基本情况和可优化点
-
-为了循序渐进，最初的是时候，我是基于传统的 **BIO** 的方式 **Socket** 进行网络传输，然后利用 **JDK 自带的序列化机制** 来实现这个 RPC 框架的。后面，我对原始版本进行了优化，已完成的优化点和可以完成的优化点我都列在了下面 👇。
-
-**为什么要把可优化点列出来？** 主要是想给哪些希望优化这个 RPC 框架的小伙伴一点思路。欢迎大家 fork 本仓库，然后自己进行优化。
+## 原项目已实现的功能点
 
 - [x] **使用 Netty（基于 NIO）替代 BIO 实现网络传输；**
 - [x] **使用开源的序列化机制 Kyro（也可以用其它的）替代 JDK 自带的序列化机制；**
@@ -83,191 +30,608 @@
 - [ ] **服务监控中心（类似dubbo admin）**
 - [x] **设置 gzip 压缩**
 
-### 项目模块概览
 
-![](./images/RPC框架各个模块介绍.png)
 
-## 运行项目
+## 学习收获：
 
-### 导入项目
+### 1. 注册中心
 
-fork 项目到自己的仓库，然后克隆项目到自己的本地：`git clone git@github.com:username/guide-rpc-framework.git`，使用 IDEA 打开，等待项目初始化完成。
+目前选了zookeeper，数据存储设计：`/{GROUP}/{VERSION}/{serviceName}/servers/ip:port`
 
-### 初始化 git hooks
-
-**这一步主要是为了在 commit 代码之前，跑 Check Style，保证代码格式没问题，如果有问题的话就不能提交。**
-
-> 以下演示的是 Mac/Linux 对应的操作，Window 用户需要手动将 `config/git-hooks` 目录下的`pre-commit` 文件拷贝到 项目下的 `.git/hooks/` 目录。
-
-执行下面这些命令：
-
-```shell
-➜  guide-rpc-framework git:(master) ✗ chmod +x ./init.sh
-➜  guide-rpc-framework git:(master) ✗ ./init.sh
-```
-
-`init.sh` 这个脚本的主要作用是将 git commit 钩子拷贝到项目下的 `.git/hooks/` 目录，这样你每次 commit 的时候就会执行了。
-
-### CheckStyle 插件下载和配置
-
-`IntelliJ IDEA-> Preferences->Plugins->搜索下载 CheckStyle 插件`，然后按照如下方式进行配置。
-
-![CheckStyle 插件下载和配置](./images/setting-check-style.png)
-
-配置完成之后，按照如下方式使用这个插件！
-
-![插件使用方式](./images/run-check-style.png)
-
-### 下载运行 zookeeper
-
-这里使用 Docker 来下载安装。
-
-下载：
-
-```shell
-docker pull zookeeper:3.5.8
-```
-
-运行：
-
-```shell
-docker run -d --name zookeeper -p 2181:2181 zookeeper:3.5.8
-```
-
-## 使用
-
-### 服务提供端
-
-实现接口：
+先是对ServiceRegistry接口新增扩展了3个 `init、close、listServersForServiceName方法`
 
 ```java
-@Slf4j
-@RpcService(group = "test1", version = "version1")
-public class HelloServiceImpl implements HelloService {
-    static {
-        System.out.println("HelloServiceImpl被创建");
+void init();  // 负责初始化，建立连接
+void close(); // 负责清理Cache和服务列表，关闭连接
+// Provider注册服务接口
+void registerService(List<String> serviceList){ zkClient.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT).forPath(path)
+}
+// Consumer根据获取服务接口获取Provider地址
+List<String> listServersForServiceName(String rpcServiceName){
+	List<String> result = zkClient.getChildren().forPath(rpcServiceName);
+	// 缓存起来
+	SERVICE_ADDRESS_MAP.put(rpcServiceName, result);
+    // 并添加pathChildrenCacheListener，监听serverAddress上下线时对SERVICE_ADDRESS_MAP维护
+    new Thread(() -> registerWatcher(rpcServiceName, zkClient)).start();
+}
+```
+
+- 废弃ServiceDiscovery SPI接口和ZkServiceDiscoveryImpl设计，ServiceDiscovery 注入ServiceRegistry，通过调用`listServersForServiceName`方法获取ProviderServerAddress即可
+- 废弃原来的ServiceProvider接口ZkServiceProviderImpl设计，ServiceProvider只需要保留**serviceMap**用于存放`rpcServiceName->rpcSeviceObj` 键值对，另新增`fetchAllServiceName`方法用于返回所有**rpcServiceName**，用于ServiceRegistry注册服务，另外`registerService`操作延后spring容器刷新时候再发布，通过**监听器**实现（后文spring集成再介绍）
+
+> 知识点
+>
+> CuratorFramework  **crud、cache** ，还可以拓展学习[discovery、leader、locking相关](https://github.com/apache/curator/tree/master/curator-examples/src/main/java)
+
+
+
+### 2. netty网络编程：
+
+#### 2.1 自定义协议
+
+![image-20221127191408475](E:\project\guide-rpc-framework\images\custom-protocol.png)
+
+由于TCP/IP 中消息传输基于流的方式，没有边界，协议的目的就是划定消息的边界，制定通信双方要共同遵守的通信规则。
+
+* 魔数，用来在第一时间判定是否是无效数据包
+* 版本号，可以支持协议的升级
+* 消息长度
+* 消息类型
+* 序列化算法，消息正文到底采用哪种序列化反序列化方式，可以由此扩展，例如：json、protobuf、hessian、jdk
+* 压缩类型，消息数据包是否压缩传输，比如使用gzip、snappy等
+* 请求序号，为了双工通信，提供异步能力
+* 正文长度
+* 消息正文
+
+#### 2.2 编解码器（粘包拆包）
+
+处理粘包拆包问题，一般解决方案有
+
+1. 短链接，发一个包建立一次连接，这样连接建立到连接断开之间就是消息的边界，缺点效率太低
+2. 每一条消息采用固定长度，缺点浪费空间
+3. 每一条消息采用分隔符，例如 \n，缺点需要转义
+4. 每一条消息分为 head 和 body，head 中包含 body 的长度
+
+这里使用LengthFieldBasedFrameDecoder ，在发送消息前，先约定用定长字节表示接下来消息的长度
+
+> LengthFieldBasedFrameDecoder 参数
+>
+> maxFrameLength  最大长度
+>
+> lengthFieldOffset   消息长度字段偏移量
+> lengthFieldLength   长度占用字节
+> lengthAdjustment    长度调整 
+> initialBytesToStrip  剥离字节数
+>
+> 默认读取的实际长度为：frameLength +=lengthFieldOffset+lengthFieldLength+lengthAdjustment
+
+```java
+@ChannelHandler.Sharable
+public class RpcMessageCodec extends MessageToMessageCodec<ByteBuf, RpcMessage> {
+	@Override
+	void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> list) {
+        checkMagicNumber(in);
+        checkVersion(in);
+        int fullLength = in.readInt();
+        // build RpcMessage object
+        byte messageType = in.readByte();
+        byte codecType = in.readByte();
+        byte compressType = in.readByte();
+        int requestId = in.readInt();
+        ...
+    }
+	@Override
+    void encode(ChannelHandlerContext ctx, RpcMessage rpcMessage, List<Object> list) {
+        ByteBuf out = channelHandlerContext.alloc().buffer();
+        out.writeBytes(RpcConstants.MAGIC_NUMBER);
+        out.writeByte(RpcConstants.VERSION);
+        // 修改写指针后移4个字节，留空到最后填写消息长度
+        out.writerIndex(out.writerIndex() + 4);
+        byte messageType = rpcMessage.getMessageType();
+        out.writeByte(messageType);
+        out.writeByte(rpcMessage.getCodec());
+        out.writeByte(CompressTypeEnum.GZIP.getCode());
+        // requestId自增
+        out.writeInt(ATOMIC_INTEGER.getAndIncrement());
+        // serialize the body object and compress the bytes
+        // compute fullLength = head length + body length
+        ...
+        // 填写消息长度
+        out.setInt(RpcConstants.MAGIC_NUMBER.length + 1, fullLength);
+        list.add(out);
+    }
+}
+```
+
+#### 2.3 长连接和心跳机制
+
+客户端：
+
+```java
+bootstrap.group(eventLoopGroup)
+    .channel(NioSocketChannel.class)
+    // TCP Keepalive 机制，实现 TCP 层级的心跳保活功能
+    .option(ChannelOption.SO_KEEPALIVE, true) 
+    // 允许较小的数据包的发送，降低延迟
+    .option(ChannelOption.TCP_NODELAY, true)
+    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+    .handler(new LoggingHandler(LogLevel.INFO))
+    .handler(new ChannelInitializer<SocketChannel>() {
+        @Override
+        protected void initChannel(SocketChannel channel) throws Exception {
+            channel.pipeline()
+                    .addLast(new ProtocolFrameDecoder())
+                    .addLast(new RpcMessageCodec())
+                	// 5s 内如果没有向服务器写数据，会触发一个 IdleState#WRITER_IDLE 事件
+                    .addLast(new IdleStateHandler(0, WRITE_TIMEOUT_SECONDS, 0))
+                	// 触发了写空闲事件则发送心跳
+                    .addLast(new HeartBeatHandler())
+                    .addLast(new ClientRpcMessageHandler(unprocessedRequests));
+        }
+    });
+```
+
+服务端：
+
+```java
+ServerBootstrap serverBootstrap = new ServerBootstrap();
+serverBootstrap.group(bossGroup, workerGroup)
+    .channel(NioServerSocketChannel.class)
+    // TCP默认开启了 Nagle 算法，该算法的作用是尽可能的发送大数据快，减少网络传输。TCP_NODELAY 参数的作用就是控制是否启用 Nagle 算法。
+    .childOption(ChannelOption.TCP_NODELAY, true)
+    // 是否开启 TCP 底层心跳机制
+    .childOption(ChannelOption.SO_KEEPALIVE, true)
+    // 表示系统用于临时存放已完成三次握手的请求的队列的最大长度,如果连接建立频繁，服务器处理创建新连接较慢，可以适当调大这个参数
+    .option(ChannelOption.SO_BACKLOG, 128)
+    .handler(new LoggingHandler(LogLevel.INFO))
+    // 当客户端第一次进行请求的时候才会进行初始化
+    .childHandler(new ChannelInitializer<SocketChannel>() {
+        @Override
+        protected void initChannel(SocketChannel ch) {	
+            ch.pipeline()
+                    .addLast(new ProtocolFrameDecoder())
+                    .addLast(new RpcMessageCodec())
+                	// 5s 内如果没有收到 channel 的数据，会触发一个 IdleState#READER_IDLE 事件
+                    .addLast(new ReadTimeoutHandler(READ_TIMEOUT_SECONDS))
+                    // 触发了读空闲事件则断开客户端连接
+                    .addLast(new HeartBeatHandler())
+                    // 独立的线程池处理Handler
+                    .addLast(serviceHandlerGroup, new ServerRpcMessageHandler());
+        }
+    });
+// 绑定端口，阻塞等到绑定成功
+channel = serverBootstrap.bind(serverPort).sync().channel();
+```
+
+```java
+@ChannelHandler.Sharable
+public class HeartBeatHandler extends ChannelDuplexHandler {
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        RpcMessage rpcMessage = (RpcMessage) msg;
+        byte messageType = rpcMessage.getMessageType();
+        if (messageType == RpcConstants.HEARTBEAT_REQUEST_TYPE) {
+            // 代表服务端收到客户端发送的心跳请求，则直接回复PONG
+            ctx.channel().writeAndFlush(this.getHeartBeatResponseMessage())
+                .addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        } else if (messageType == RpcConstants.HEARTBEAT_RESPONSE_TYPE) {
+            // 代表客户端收到服务端心跳请求回复
+            log.info("received heartbeat [{}]", rpcMessage.getData());
+        } else {
+            // 如果不是心跳消息类型，则交给下一个InboundHandle处理
+            ctx.fireChannelRead(msg);
+        }
     }
 
     @Override
-    public String hello(Hello hello) {
-        log.info("HelloServiceImpl收到: {}.", hello.getMessage());
-        String result = "Hello description is " + hello.getDescription();
-        log.info("HelloServiceImpl返回: {}.", result);
-        return result;
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof IdleStateEvent) {
+            IdleState state = ((IdleStateEvent) evt).state();
+            // 客户端触发写空闲事件，发送心跳
+            if (state == IdleState.WRITER_IDLE) {
+                log.info("write idle happen [{}]", ctx.channel().remoteAddress());
+                ctx.writeAndFlush(this.getHeartBeatRequestMessage()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            }
+            // 服务端触发读空闲事件，客户端已下线，关闭连接
+            if (state == IdleState.READER_IDLE) {
+                log.info("idle check happen, so close the connection");
+                ctx.close();
+            }
+        } else {
+            super.userEventTriggered(ctx, evt);
+        }
     }
+    ...
 }
-	
-@Slf4j
-public class HelloServiceImpl2 implements HelloService {
+```
 
-    static {
-        System.out.println("HelloServiceImpl2被创建");
-    }
+#### 2.4 重用 Channel  && 异步接收响应
 
+```java
     @Override
-    public String hello(Hello hello) {
-        log.info("HelloServiceImpl2收到: {}.", hello.getMessage());
-        String result = "Hello description is " + hello.getDescription();
-        log.info("HelloServiceImpl2返回: {}.", result);
-        return result;
+    public Promise sendRpcRequest(RpcRequest rpcRequest) {
+        EventExecutor executor = serviceHandlerGroup.next();
+        // 创建Promise用于异步接收结果
+        Promise<RpcResponse<Object>> resultFuture = executor.newPromise();
+        InetSocketAddress inetSocketAddress = serviceDiscovery.lookupService(rpcRequest);
+        // 客户端发消息时，通过channelManager获取server address关联的channel
+        Channel channel = getChannel(inetSocketAddress);
+        if (channel.isActive()) {
+            // 将RequestId-> Promise(response) 存入unprocessedRequestsMap
+            unprocessedRequests.put(rpcRequest.getRequestId(), resultFuture);
+            ...
+            // 发送rpc请求
+            channel.writeAndFlush(rpcMessage)
+                .addListener((ChannelFutureListener) future -> {
+                if (future.isSuccess()) {
+                    log.info("client send message: [{}]", rpcMessage);
+                } else {
+                    future.channel().close();
+                    resultFuture.setFailure(future.cause());
+                    log.error("Send failed:", future.cause());
+                }
+            });
+        } else {
+            resultFuture.setFailure(new IllegalStateException("remote call fail: " + inetSocketAddress.toString()));
+        }
+		return resultFuture;
     }
-}
+
+    public Channel getChannel(InetSocketAddress inetSocketAddress) {
+        Channel channel = channelManager.get(inetSocketAddress);
+        if (channel == null) {
+            channel = doConnect(inetSocketAddress);
+            channelManager.set(inetSocketAddress, channel);
+        }
+        return channel;
+    }
 ```
 
-发布服务(使用 Netty 进行传输)：
-
 ```java
-/**
- * Server: Automatic registration service via @RpcService annotation
- *
- * @author shuang.kou
- * @createTime 2020年05月10日 07:25:00
- */
-@RpcScan(basePackage = {"github.javaguide.serviceimpl"})
-public class NettyServerMain {
-    public static void main(String[] args) {
-        // Register service via annotation
-        new AnnotationConfigApplicationContext(NettyServerMain.class);
-        NettyServer nettyServer = new NettyServer();
-        // Register service manually
-        HelloService helloService2 = new HelloServiceImpl2();
-        RpcServiceProperties rpcServiceConfig = RpcServiceProperties.builder()
-                .group("test2").version("version2").build();
-        nettyServer.registerService(helloService2, rpcServiceConfig);
-        nettyServer.start();
-    }
-}
-```
-
-### 服务消费端
-
-```java
-@Component
-public class HelloController {
-
-    @RpcReference(version = "version1", group = "test1")
-    private HelloService helloService;
-
-    public void test() throws InterruptedException {
-        String hello = this.helloService.hello(new Hello("111", "222"));
-        //如需使用 assert 断言，需要在 VM options 添加参数：-ea
-        assert "Hello description is 222".equals(hello);
-        Thread.sleep(12000);
-        for (int i = 0; i < 10; i++) {
-            System.out.println(helloService.hello(new Hello("111", "222")));
+@ChannelHandler.Sharable
+public class ClientRpcMessageHandler extends SimpleChannelInboundHandler<RpcMessage> {
+    ...
+    /**
+     * Read the message transmitted by the server
+     */
+    @Override
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcMessage rpcMessage) {
+        log.info("client receive msg: [{}]", rpcMessage);
+        if (rpcMessage.getMessageType() == RpcConstants.RESPONSE_TYPE) {
+            // rpcMessage带有requestId,可在客户端收到RpcResponse时将响应结果放入前面创建的Promise
+            unprocessedRequests.complete((RpcResponse<Object>) rpcMessage.getData());
         }
     }
 }
 ```
 
+#### 2.6 发送超时和重试
+
 ```java
-ClientTransport rpcRequestTransport = new SocketRpcClient();
-RpcServiceProperties rpcServiceConfig = RpcServiceProperties.builder()
-        .group("test2").version("version2").build();
-RpcClientProxy rpcClientProxy = new RpcClientProxy(rpcRequestTransport, rpcServiceConfig);
-HelloService helloService = rpcClientProxy.getProxy(HelloService.class);
-String hello = helloService.hello(new Hello("111", "222"));
-System.out.println(hello);
+private Object retrySend(RpcRequest rpcRequest, int retry) {
+    int timeout = serviceDetail.getTimeout();
+    RpcResponse<Object> response = null;
+    long beginTime = System.currentTimeMillis();
+    // 调用超时和retry重试
+    while (response == null && TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - beginTime) < timeout && retry > 0) {
+        // 使用 Promise 包装接受客户端返回结果
+        Promise<RpcResponse<Object>> resultFuture = (Promise<RpcResponse<Object>>) rpcRequestTransport.sendRpcRequest(rpcRequest);
+        try {
+            response = resultFuture.get(timeout, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            retry--;
+        }
+    }
+    if (response == null) {
+        throw new RpcException(RpcErrorMessageEnum.SERVICE_INVOCATION_FAILURE, INTERFACE_NAME + ":" + rpcRequest.getInterfaceName());
+    }
+    return response.getData();
+}
 ```
 
-## 相关问题
+#### 2.5 独立线程池负责业务处理
 
-### 为什么要造这个轮子？Dubbo 不香么？
+```
+public class NettyRpcServer {
+	private final EventLoopGroup bossGroup = new NioEventLoopGroup();
+    private final EventLoopGroup workerGroup = new NioEventLoopGroup();
+    private final DefaultEventExecutorGroup serviceHandlerGroup = 
+    new DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors() * 2,
+            new ThreadFactoryBuilder().setNameFormat("rpc-business-thread").setDaemon(false).build());
+...          
+	public void start() {
+		serverBootstrap.group(bossGroup, workerGroup)
+            .channel(NioServerSocketChannel.class)
+            ...
+            // 独立的线程池处理Handler
+            .addLast(serviceHandlerGroup, new ServerRpcMessageHandler());
+    }
+}
+```
 
-写这个 RPC 框架主要是为了通过造轮子的方式来学习，检验自己对于自己所掌握的知识的运用。
+服务端收到`RpcConstants.REQUEST_TYPE`后，需要从ServiceProvider中取出对应的ServiceObj，然后反射调用对应方法进行业务处理，所以这里对于**ServerRpcMessageHandler** 使用独立的**EventLoopGroup** 处理，这样
 
-实现一个简单的 RPC 框架实际是比较容易的，不过，相比于手写 AOP 和 IoC 还是要难一点点，前提是你搞懂了 RPC 的基本原理。
+**workerGroup**的线程可以一直处理IO读写。
 
-我之前从理论层面在我的知识星球分享过如何实现一个 RPC。不过理论层面的东西只是支撑，你看懂了理论可能只能糊弄住面试官。咱程序员这一行还是最需要动手能力，即使你是架构师级别的人物。当你动手去实践某个东西，将理论付诸实践的时候，你就会发现有很多坑等着你。
+关键代码 `io.netty.channel.AbstractChannelHandlerContext#invokeChannelRead()`
 
-大家在实际项目上还是要尽量少造轮子，有优秀的框架之后尽量就去用，Dubbo 在各个方面做的都比较好和完善。
+```java
+static void invokeChannelRead(final AbstractChannelHandlerContext next, Object msg) {
+    final Object m = next.pipeline.touch(ObjectUtil.checkNotNull(msg, "msg"), next);
+    // 下一个 handler 的事件循环是否与当前的事件循环是同一个线程
+    EventExecutor executor = next.executor();
+    // 是，直接调用
+    if (executor.inEventLoop()) {
+        next.invokeChannelRead(m);
+    } 
+    // 不是，将要执行的代码作为任务提交给下一个事件循环处理
+    else {
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                next.invokeChannelRead(m);
+            }
+        });
+    }
+}
+```
 
-### 如果我要自己写的话，需要提前了解哪些知识
+* 如果两个 handler 绑定的是同一个线程，那么就直接调用
+* 否则，把要调用的代码封装为一个任务对象，由下一个 handler 的线程来调用
 
-**Java** ：
+### 3. 序列化 & 压缩
 
-1. 动态代理机制；
-2. 序列化机制以及各种序列化框架的对比，比如 hession2、kyro、protostuff。
-3. 线程池的使用；
-4. `CompletableFuture` 的使用
-5. ......
+序列化，反序列化主要用在消息体的转换上
 
-**Netty** ：
+```java
+@ChannelHandler.Sharable
+public class RpcMessageCodec extends MessageToMessageCodec<ByteBuf, RpcMessage> {
+    void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> list){
+        ...
+        // 获取序列化类型
+        String codecName = SerializationTypeEnum.getName(rpcMessage.getCodec());
+log.info("codec name: [{}] ", codecName);
+        // SPI获取序列化器
+Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class)
+        .getExtension(codecName);
+        // 执行序列化
+bodyBytes = serializer.serialize(rpcMessage.getData());
+        // 获取压缩类型
+        String compressName = CompressTypeEnum.getName(rpcMessage.getCompress());
+        Compress compress = ExtensionLoader.getExtensionLoader(Compress.class)
+            .getExtension(compressName);
+        // 执行数据压缩
+        bodyBytes = compress.compress(bodyBytes);
+        ...
+    }
 
-1. 使用 Netty 进行网络传输；
-2. `ByteBuf` 介绍
-3. Netty 粘包拆包
-4. Netty 长连接和心跳机制
+    // 解压、反序列化同理
+}
+```
 
-**Zookeeper** :
+拓展了解常用的序列化方式，性能差异
 
-1. 基本概念；
-2. 数据结构；
-3. 如何使用 Netflix 公司开源的 zookeeper 客户端框架 Curator 进行增删改查；
+### 4. rpc调用
 
-## 教程
+#### 4.1 负载均衡
 
-Guide 的星球正在更新《从零开始手把手教你实现一个简单的 RPC 框架》。扫描下方二维码关注“**JavaGuide**”后回复 “**星球**”即可。
+```java
+    public InetSocketAddress lookupService(RpcRequest rpcRequest) {
+        String rpcServiceName = rpcRequest.getRpcServiceName();
+        List<String> serviceUrlList = serviceRegistry.listServersForServiceName(rpcServiceName);
+        ...
+        // ConsistentHashLoadBalance(一致性hash)和随机
+        String targetServiceUrl = loadbalancer.selectServiceAddress(serviceUrlList, rpcRequest);
+        ...
+        return new InetSocketAddress(host, port);
+    }
+```
 
-![我的公众号](https://my-blog-to-use.oss-cn-beijing.aliyuncs.com/2019-6/167598cd2e17b8ec.png)
+可拓展了解常见负载均衡策略：轮询、随机（加权）、一致性hash、最小连接..
 
+#### 4.2 动态代理
+
+```java
+@RpcReference(group = "test", version = "v1")
+HelloService helloService;
+```
+
+客户端使用@RpcReference标识RPC服务接口，当调用其接口方法时其实是执行一系列操作：
+
+1. 根据HelloService接口+group+version组成RpcServiceName
+2. serviceDiscovery获取RpcServiceName对应的ServiceProvider Address
+3. nettyClient根据Address获取对应通信Channel
+4. 构建RpcRequest，发送RpcRequestMessage
+5. 等待获取ServiceProvider 的响应结果
+
+```java
+public class RpcClientProxy implements InvocationHandler {
+    public <T> T getProxy(Class<T> clazz) {
+        return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class<?>[]{clazz}, this);
+    }
+	
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) {
+        if (method.getName().equals("toString")) {
+            return serviceDetail.getRpcServiceName();
+        }
+        log.info("invoked method: [{}]", method.getName());
+        // 通过动态代理方式执行
+        RpcRequest rpcRequest = RpcRequest.builder().methodName(method.getName())
+                .parameters(args)
+                .interfaceName(serviceDetail.getServiceName())
+                .paramTypes(method.getParameterTypes())
+                .requestId(UUID.randomUUID().toString())
+                .group(serviceDetail.getGroup())
+                .version(serviceDetail.getVersion())
+                .build();
+        return retrySend(rpcRequest, serviceDetail.getRetries());
+    }
+}
+```
+
+#### 4.3 反射
+
+```java
+public class RpcRequestHandler {
+// 服务端接收到RPC请求解析得到对应服务接口，通过反射执行对应方法
+    public Object handle(RpcRequest rpcRequest) {
+        serviceProvider = Optional.ofNullable(serviceProvider).orElseGet(() -> ApplicationContextUtil.getBean(ServiceProvider.class));
+        Object service = serviceProvider.getService(rpcRequest.getRpcServiceName());
+        return invokeTargetMethod(rpcRequest, service);
+    }
+}
+```
+
+### 5. spring集成
+
+#### 5.1 @RpcScan 
+
+在RpcScan 注解上@Import(AutoRpcServiceScannerRegistrar.class)
+
+```java
+public class AutoRpcServiceScannerRegistrar implements ImportBeanDefinitionRegistrar, ResourceLoaderAware, EnvironmentAware {
+    private static final String SPRING_BEAN_BASE_PACKAGE = "github.javaguide";
+    private static final String BASE_PACKAGE_ATTRIBUTE_NAME = "basePackage";
+    private Environment environment;
+    private ResourceLoader resourceLoader;
+...
+
+    @Override
+    public void registerBeanDefinitions(AnnotationMetadata annotationMetadata, BeanDefinitionRegistry registry) {
+        String[] basePackage = getBasePackages(annotationMetadata);
+        // process @RpcService
+        ClassPathBeanDefinitionScanner rpcServiceScanner = new ClassPathBeanDefinitionScanner(registry, false,
+                environment, resourceLoader);
+        rpcServiceScanner.addIncludeFilter(new AnnotationTypeFilter(RpcService.class));
+        rpcServiceScanner.scan(basePackage);
+        ClassPathBeanDefinitionScanner rpcFrameworkScanner = new ClassPathBeanDefinitionScanner(registry, false,
+                environment, resourceLoader);
+        rpcFrameworkScanner.addIncludeFilter(new AnnotationTypeFilter(Component.class));
+        rpcFrameworkScanner.scan(SPRING_BEAN_BASE_PACKAGE);
+    }
+}
+```
+
+AutoRpcServiceScannerRegistrar 实现ImportBeanDefinitionRegistrar接口，通过ClassPathBeanDefinitionScanner扫描指定package实现注册BeanDifinition
+
+#### 5.2 RpcAnnotationProcessor
+
+```java
+@Override
+public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+    // 对客户端上RpcReference注解的属性，通过动态代理封装成代理对象返回
+    Class<?> targetClass = AopProxyUtils.ultimateTargetClass(bean);
+    processRpcReferenceAnnotation(bean, targetClass);
+    // 对服务端上RpcService注解，调用serviceProvider发布到zk
+    processRpcServiceAnnotation(bean, targetClass);
+    return bean;
+}
+
+private void processRpcServiceAnnotation(Object bean, Class<?> targetClass) {
+    if (targetClass.isAnnotationPresent(RpcService.class)) {
+        log.info("[{}] is annotated with  [{}]", targetClass.getName(), RpcService.class.getCanonicalName());
+        // get RpcService annotation
+        RpcService rpcService = targetClass.getAnnotation(RpcService.class);
+        // build serviceDetail
+        ServiceDetail serviceDetail = ServiceDetail.builder()
+                .group(rpcService.group())
+                .version(rpcService.version())
+                .serviceName(targetClass.getInterfaces()[0].getSimpleName()).
+                .serviceObj(bean).build();
+        // 调整到AfterInitialization保存到serviceMap，解决：BeforeInitialization保存的是原始对象，导致AOP失效
+        serviceProvider = Optional.ofNullable(serviceProvider).orElseGet(() -> beanFactory.getBean(ServiceProvider.class));
+        serviceProvider.addService(serviceDetail);
+    }
+}
+
+private void processRpcReferenceAnnotation(Object bean, Class<?> targetClass) {
+    Field[] declaredFields = targetClass.getDeclaredFields();
+    for (Field declaredField : declaredFields) {
+        RpcReference rpcReference = declaredField.getAnnotation(RpcReference.class);
+        if (rpcReference != null) {
+            Class<?> type = declaredField.getType();
+            ServiceDetail serviceDetail = ServiceDetail.builder().group(rpcReference.group())
+                    .version(rpcReference.version()).serviceName(type.getSimpleName()).build();
+            registryRpcReferenceClass(rpcReference, type, serviceDetail);
+            // 通过FactoryBean.getObject 获取代理对象，RpcReference相同返回同一代理对象
+            Object clientProxy = beanFactory.getBean(serviceDetail.getRpcServiceName());
+            declaredField.setAccessible(true);
+            try {
+                declaredField.set(bean, clientProxy);
+            } catch (IllegalAccessException e) {
+                log.error("RpcReference Inject occur error", e);
+            }
+        }
+    }
+}
+
+private void registryRpcReferenceClass(RpcReference rpcReference, Class<?> type, ServiceDetail serviceDetail) {
+    if (beanFactory.containsBean(serviceDetail.getRpcServiceName())) {
+        return;
+    }
+    ...
+    AbstractBeanDefinition beanDefinition = BeanDefinitionBuilder.genericBeanDefinition(RpcServiceFactoryBean.class)
+            .addConstructorArgValue(type)
+            .addConstructorArgValue(nettyRpcClient)
+            .addConstructorArgValue(serviceDetail).getBeanDefinition();
+    BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
+    // 注册成为FactoryBean
+    registry.registerBeanDefinition(serviceDetail.getRpcServiceName(), beanDefinition);
+}
+```
+
+RpcAnnotationProcessor 实现BeanPostProcessor接口，在postProcessAfterInitialization拦截，对bean上
+
+**@RpcReference和@RpcService** 注解处理
+
+RpcAnnotationProcessor 实现Orderd接口，设置低优先级，在AbstractAutoProxyCreator之后处理，**@RpcService**就能设置AOP代理对象
+
+对使用**@RpcReference** 的成员属性，注册RpcServiceFactoryBean beanDefinition，通过FactoryBean.getObject 获取代理对象，设置到Field上。
+
+#### 5.3 AutoRpcServiceConfiguration
+
+springboot-starter 自动配置
+
+```java
+@Configuration
+@EnableConfigurationProperties(RpcConfig.class)
+public class AutoRpcServiceConfiguration {
+
+    @ConditionalOnProperty(prefix = "rpc.registry", name = "type", havingValue = "zookeeper", matchIfMissing = true)
+    @ConditionalOnClass(value = {org.apache.zookeeper.ZooKeeper.class})
+    @Bean(initMethod = "init", destroyMethod = "close")
+    public ZookeeperServiceRegistry zookeeperRegistryCenter(ZookeeperProperties zookeeperProperties, RpcConfig rpcConfig) {
+        return new ZookeeperServiceRegistry(zookeeperProperties, rpcConfig);
+    }
+
+    @ConditionalOnProperty(value = "rpc.protocol.consumer", havingValue = "true")
+    @Bean
+    public NettyRpcClient nettyRpcClient(ServiceDiscovery serviceDiscovery) {
+        return new NettyRpcClient(serviceDiscovery);
+    }
+
+    @ConditionalOnProperty(value = "rpc.protocol.provider", havingValue = "true")
+    @Bean
+    public NettyRpcServer nettyRpcServer(RpcConfig rpcConfig) {
+        return new NettyRpcServer(rpcConfig);
+    }
+
+    @ConditionalOnProperty(value = "rpc.protocol.provider", havingValue = "true")
+    @EventListener
+    public void publishRpcServiceListener(ContextRefreshedEvent event) {
+        // 服务暴露延迟到ContextRefreshed 时候，再调用serviceRegistry注册服务
+        ApplicationContext applicationContext = event.getApplicationContext();
+        ServiceProvider provider = applicationContext.getBean(ServiceProvider.class);
+        ServiceRegistry serviceRegistry = applicationContext.getBean(ServiceRegistry.class);
+        serviceRegistry.registerService(provider.fetchAllServiceName());
+    }
+}
+```
+
+spring.factories
+
+```txt
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=github.javaguide.spring.AutoRpcServiceConfiguration
+```

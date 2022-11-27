@@ -1,6 +1,6 @@
 package github.javaguide.extension;
 
-import github.javaguide.utils.StringUtil;
+import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
@@ -52,7 +52,7 @@ public final class ExtensionLoader<T> {
     }
 
     public T getExtension(String name) {
-        if (StringUtil.isBlank(name)) {
+        if (Strings.isNullOrEmpty(name)) {
             throw new IllegalArgumentException("Extension name should not be null or empty.");
         }
         // firstly get from cache, if not hit, create one
@@ -63,6 +63,7 @@ public final class ExtensionLoader<T> {
         }
         // create a singleton if no instance exists
         Object instance = holder.get();
+        // DCL
         if (instance == null) {
             synchronized (holder) {
                 instance = holder.get();

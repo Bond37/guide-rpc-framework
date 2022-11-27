@@ -1,0 +1,10 @@
+rpc:
+  protocol:
+    retries: 3
+    timeout: 5
+    consumer: true
+  registry:
+    type: zookeeper
+    zookeeper:
+      namespace: rpc
+      server-lists: 127.0.0.1:2181

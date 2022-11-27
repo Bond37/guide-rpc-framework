@@ -88,7 +88,7 @@ public final class NettyRpcClient implements RpcRequestTransport {
         // build return value
         Promise<RpcResponse<Object>> resultFuture = executor.newPromise();
         InetSocketAddress inetSocketAddress = serviceDiscovery.lookupService(rpcRequest);
-        // get  server address related channel
+        // get server address related channel
         Channel channel = getChannel(inetSocketAddress);
 
         if (channel.isActive()) {
