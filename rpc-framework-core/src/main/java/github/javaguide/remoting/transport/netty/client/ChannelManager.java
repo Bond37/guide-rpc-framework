@@ -2,7 +2,6 @@ package github.javaguide.remoting.transport.netty.client;
 
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
-
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,13 +13,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * @createTime 2020年05月29日 16:36:00
  */
 @Slf4j
-public class ChannelProvider {
+public class ChannelManager {
 
-    private final Map<String, Channel> channelMap;
-
-    public ChannelProvider() {
-        channelMap = new ConcurrentHashMap<>();
-    }
+    private final Map<String, Channel> channelMap = new ConcurrentHashMap<>();
 
     public Channel get(InetSocketAddress inetSocketAddress) {
         String key = inetSocketAddress.toString();

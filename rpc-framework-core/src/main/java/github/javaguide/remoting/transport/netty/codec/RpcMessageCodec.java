@@ -1,5 +1,6 @@
 package github.javaguide.remoting.transport.netty.codec;
 
+
 import github.javaguide.compress.Compress;
 import github.javaguide.enums.CompressTypeEnum;
 import github.javaguide.enums.SerializationTypeEnum;
@@ -10,14 +11,20 @@ import github.javaguide.remoting.dto.RpcRequest;
 import github.javaguide.remoting.dto.RpcResponse;
 import github.javaguide.serialize.Serializer;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.MessageToMessageCodec;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
+ * <p>
  * custom protocol decoder
+ * <p>
  * <pre>
  *   0     1     2     3     4        5     6     7     8         9          10      11     12  13  14   15 16
  *   +-----+-----+-----+-----+--------+----+----+----+------+-----------+-------+----- --+-----+-----+-------+
@@ -32,61 +39,19 @@ import java.util.Arrays;
  * 1B compress（压缩类型） 1B codec（序列化类型）    4B  requestId（请求的Id）
  * body（object类型数据）
  * </pre>
- * <p>
- * {@link LengthFieldBasedFrameDecoder} is a length-based decoder , used to solve TCP unpacking and sticking problems.
- * </p>
  *
- * @author wangtao
+ * @author WangTao
  * @createTime on 2020/10/2
  * @see <a href="https://zhuanlan.zhihu.com/p/95621344">LengthFieldBasedFrameDecoder解码器</a>
  */
-@Slf4j
-public class RpcMessageDecoder extends LengthFieldBasedFrameDecoder {
-    public RpcMessageDecoder() {
-        // lengthFieldOffset: magic code is 4B, and version is 1B, and then full length. so value is 5
-        // lengthFieldLength: full length is 4B. so value is 4
-        // lengthAdjustment: full length include all data and read 9 bytes before, so the left length is (fullLength-9). so values is -9
-        // initialBytesToStrip: we will check magic code and version manually, so do not strip any bytes. so values is 0
-        this(RpcConstants.MAX_FRAME_LENGTH, 5, 4, -9, 0);
-    }
 
-    /**
-     * @param maxFrameLength      Maximum frame length. It decide the maximum length of data that can be received.
-     *                            If it exceeds, the data will be discarded.
-     * @param lengthFieldOffset   Length field offset. The length field is the one that skips the specified length of byte.
-     * @param lengthFieldLength   The number of bytes in the length field.
-     * @param lengthAdjustment    The compensation value to add to the value of the length field
-     * @param initialBytesToStrip Number of bytes skipped.
-     *                            If you need to receive all of the header+body data, this value is 0
-     *                            if you only want to receive the body data, then you need to skip the number of bytes consumed by the header.
-     */
-    public RpcMessageDecoder(int maxFrameLength, int lengthFieldOffset, int lengthFieldLength,
-                             int lengthAdjustment, int initialBytesToStrip) {
-        super(maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment, initialBytesToStrip);
-    }
+@Slf4j
+@ChannelHandler.Sharable
+public class RpcMessageCodec extends MessageToMessageCodec<ByteBuf, RpcMessage> {
+    private static final AtomicInteger ATOMIC_INTEGER = new AtomicInteger(0);
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        Object decoded = super.decode(ctx, in);
-        if (decoded instanceof ByteBuf) {
-            ByteBuf frame = (ByteBuf) decoded;
-            if (frame.readableBytes() >= RpcConstants.TOTAL_LENGTH) {
-                try {
-                    return decodeFrame(frame);
-                } catch (Exception e) {
-                    log.error("Decode frame error!", e);
-                    throw e;
-                } finally {
-                    frame.release();
-                }
-            }
-
-        }
-        return decoded;
-    }
-
-
-    private Object decodeFrame(ByteBuf in) {
+    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> list) throws Exception {
         // note: must read ByteBuf in order
         checkMagicNumber(in);
         checkVersion(in);
@@ -102,11 +67,13 @@ public class RpcMessageDecoder extends LengthFieldBasedFrameDecoder {
                 .messageType(messageType).build();
         if (messageType == RpcConstants.HEARTBEAT_REQUEST_TYPE) {
             rpcMessage.setData(RpcConstants.PING);
-            return rpcMessage;
+            list.add(rpcMessage);
+            return;
         }
         if (messageType == RpcConstants.HEARTBEAT_RESPONSE_TYPE) {
             rpcMessage.setData(RpcConstants.PONG);
-            return rpcMessage;
+            list.add(rpcMessage);
+            return;
         }
         int bodyLength = fullLength - RpcConstants.HEAD_LENGTH;
         if (bodyLength > 0) {
@@ -130,9 +97,9 @@ public class RpcMessageDecoder extends LengthFieldBasedFrameDecoder {
                 rpcMessage.setData(tmpValue);
             }
         }
-        return rpcMessage;
-
+        list.add(rpcMessage);
     }
+
 
     private void checkVersion(ByteBuf in) {
         // read the version and compare
@@ -154,4 +121,44 @@ public class RpcMessageDecoder extends LengthFieldBasedFrameDecoder {
         }
     }
 
+    @Override
+    protected void encode(ChannelHandlerContext channelHandlerContext, RpcMessage rpcMessage, List<Object> list) throws Exception {
+        ByteBuf out = channelHandlerContext.alloc().buffer();
+        out.writeBytes(RpcConstants.MAGIC_NUMBER);
+        out.writeByte(RpcConstants.VERSION);
+        // 修改写指针后移4个字节，留空到最后填写消息长度
+        out.writerIndex(out.writerIndex() + 4);
+        byte messageType = rpcMessage.getMessageType();
+        out.writeByte(messageType);
+        out.writeByte(rpcMessage.getCodec());
+        out.writeByte(CompressTypeEnum.GZIP.getCode());
+        // requestId自增
+        out.writeInt(ATOMIC_INTEGER.getAndIncrement());
+        // build full length
+        byte[] bodyBytes = null;
+        int fullLength = RpcConstants.HEAD_LENGTH;
+        // if messageType is not heartbeat message,fullLength = head length + body length
+        if (messageType != RpcConstants.HEARTBEAT_REQUEST_TYPE
+                && messageType != RpcConstants.HEARTBEAT_RESPONSE_TYPE) {
+            // serialize the object
+            String codecName = SerializationTypeEnum.getName(rpcMessage.getCodec());
+            log.info("codec name: [{}] ", codecName);
+            Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class)
+                    .getExtension(codecName);
+            bodyBytes = serializer.serialize(rpcMessage.getData());
+            // compress the bytes
+            String compressName = CompressTypeEnum.getName(rpcMessage.getCompress());
+            Compress compress = ExtensionLoader.getExtensionLoader(Compress.class)
+                    .getExtension(compressName);
+            bodyBytes = compress.compress(bodyBytes);
+            fullLength += bodyBytes.length;
+        }
+        if (bodyBytes != null) {
+            out.writeBytes(bodyBytes);
+        }
+        // 填写消息长度
+        out.setInt(RpcConstants.MAGIC_NUMBER.length + 1, fullLength);
+        list.add(out);
+    }
 }
+
