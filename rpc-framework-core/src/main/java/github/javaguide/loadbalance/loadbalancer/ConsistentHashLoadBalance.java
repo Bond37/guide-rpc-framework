@@ -7,10 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -34,7 +31,7 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
             selectors.put(rpcServiceName, new ConsistentHashSelector(serviceAddresses, 160, identityHashCode));
             selector = selectors.get(rpcServiceName);
         }
-        return selector.select(rpcServiceName + Arrays.stream(rpcRequest.getParameters()));
+        return selector.select(rpcServiceName + Arrays.stream(Optional.ofNullable(rpcRequest.getParameters()).orElseGet(() -> new Object[0])));
     }
 
     static class ConsistentHashSelector {
