@@ -83,8 +83,7 @@ public class NettyRpcServer {
     @SneakyThrows
     @PreDestroy
     public void close() {
-        // 等待服务端监听端口关闭
-        channel.closeFuture().sync();
+        channel.close();
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
         serviceHandlerGroup.shutdownGracefully();
